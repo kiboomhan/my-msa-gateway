@@ -45,8 +45,8 @@ public class LoggingFilter extends AbstractGatewayFilterFactory<LoggingFilter.Co
             return chain.filter(exchange).then(Mono.fromRunnable(() -> {
                 if (config.isPostLogger()) log.info("Logging POST Filter: response code -> {}", response.getStatusCode());
             }));
-//        }, Ordered.HIGHEST_PRECEDENCE); // -> 처음으로 실행
-            }, Ordered.LOWEST_PRECEDENCE); // -> 처음으로 실행
+//        }, Ordered.HIGHEST_PRECEDENCE); // -> 우선순위 높게 실행
+            }, Ordered.LOWEST_PRECEDENCE); // -> 우선순위 낮게 실행
         return filter;
     }
 

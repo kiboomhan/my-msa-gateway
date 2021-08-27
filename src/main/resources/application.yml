@@ -4,9 +4,9 @@ server:
 
 eureka:
   client:
+    register-with-eureka: true
+    fetch-registry: true
     service-url:
-      register-with-eureka: false
-      fetch-registry: false
       defautZone: http://localhost:8761/eureka
 
 spring:
@@ -22,7 +22,7 @@ spring:
             postLogger: true
       routes:
         - id: msa-client-app-01
-          uri: http://localhost:8081
+          uri: lb://MSA-CLIENT-APP-01
           predicates:
             - Path=/app01/**
           filters:
@@ -30,7 +30,7 @@ spring:
 #            - AddResponseHeader=app01-gate-out, app01-gate-byebye2
             - CustomFilter
         - id: msa-client-app-02
-          uri: http://localhost:8082
+          uri: lb://MSA-CLIENT-APP-02
           predicates:
             - Path=/app02/**
           filters:
