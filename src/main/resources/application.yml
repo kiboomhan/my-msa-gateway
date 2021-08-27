@@ -14,13 +14,34 @@ spring:
     name: msa-gateway
   cloud:
     gateway:
+      default-filters:
+        - name: GlobalFilter
+          args:
+            baseMessage: Spring Cloud Gateway GlobalFilter
+            preLogger: true
+            postLogger: true
       routes:
         - id: msa-client-app-01
           uri: http://localhost:8081
           predicates:
             - Path=/app01/**
+          filters:
+#            - AddRequestHeader=app01-gate-in, app01-gate-gogo2
+#            - AddResponseHeader=app01-gate-out, app01-gate-byebye2
+            - CustomFilter
         - id: msa-client-app-02
           uri: http://localhost:8082
           predicates:
             - Path=/app02/**
+          filters:
+#            - AddRequestHeader=app02-gate-in, app02-gate-gogo2
+#            - AddResponseHeader=app02-gate-out, app02-gate-byebye2
+            - name: CustomFilter
+            - name: LoggingFilter
+              args:
+                baseMessage: Spring Cloud Gateway LoggingFilter
+                preLogger: true
+                postLogger: true
+
+
 
