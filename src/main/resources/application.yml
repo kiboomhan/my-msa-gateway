@@ -21,6 +21,10 @@ spring:
             preLogger: true
             postLogger: true
       routes:
+        - id: msa-app-user
+          uri: lb://MSA-APP-USER
+          predicates:
+            - Path=/user/**
         - id: msa-client-app-01
           uri: lb://MSA-CLIENT-APP-01
           predicates:
