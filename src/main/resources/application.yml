@@ -25,6 +25,14 @@ spring:
           uri: lb://MSA-APP-USER
           predicates:
             - Path=/user/**
+        - id: msa-app-catalog
+          uri: lb://MSA-APP-CATALOG
+          predicates:
+            - Path=/catalog/**
+        - id: msa-app-order
+          uri: lb://MSA-APP-ORDER
+          predicates:
+            - Path=/order/**
         - id: msa-client-app-01
           uri: lb://MSA-CLIENT-APP-01
           predicates:
