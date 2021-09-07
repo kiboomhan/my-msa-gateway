@@ -21,10 +21,35 @@ spring:
             preLogger: true
             postLogger: true
       routes:
+#        - id: msa-app-user
+#          uri: lb://MSA-APP-USER
+#          predicates:
+#            - Path=/user/**
+        - id: msa-app-user
+          uri: lb://MSA-APP-USER
+          predicates:
+            - Path=/user/login
+            - Method=POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/user/(?<segment>.*), /$\{segment}
+        - id: msa-app-user
+          uri: lb://MSA-APP-USER
+          predicates:
+            - Path=/user/users
+            - Method=POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/user/(?<segment>.*), /$\{segment}
         - id: msa-app-user
           uri: lb://MSA-APP-USER
           predicates:
             - Path=/user/**
+            - Method=GET
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/user/(?<segment>.*), /$\{segment}
+            - AuthorizationHeaderFilter
         - id: msa-app-catalog
           uri: lb://MSA-APP-CATALOG
           predicates:
@@ -55,5 +80,8 @@ spring:
                 preLogger: true
                 postLogger: true
 
+token:
+#  expiration_time: 86400000
+  secret: important_key
 
 
