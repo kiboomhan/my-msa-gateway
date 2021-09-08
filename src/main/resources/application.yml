@@ -12,7 +12,13 @@ eureka:
 spring:
   application:
     name: msa-gateway
+  profiles:
+    active: dev
+  config:
+    import: "optional:configserver:http://127.0.0.1:8888"
   cloud:
+    config:
+      name: ecommerce
     gateway:
       default-filters:
         - name: GlobalFilter
@@ -50,6 +56,14 @@ spring:
             - RemoveRequestHeader=Cookie
             - RewritePath=/user/(?<segment>.*), /$\{segment}
             - AuthorizationHeaderFilter
+        - id: msa-app-user
+          uri: lb://MSA-APP-USER
+          predicates:
+            - Path=/user/actuator/**
+            - Method=GET,POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/user/(?<segment>.*), /$\{segment}
         - id: msa-app-catalog
           uri: lb://MSA-APP-CATALOG
           predicates:
@@ -80,8 +94,12 @@ spring:
                 preLogger: true
                 postLogger: true
 
-token:
-#  expiration_time: 86400000
-  secret: important_key
+#token:
+##  expiration_time: 86400000
+#  secret: important_key
 
-
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh, health, beans, httptrace

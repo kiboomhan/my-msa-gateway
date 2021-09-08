@@ -45,6 +45,7 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
         });
     }
 
+
     private boolean isJwtValid(String jwt) {
         boolean returnValue = true;
 
