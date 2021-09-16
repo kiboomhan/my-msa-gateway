@@ -36,6 +36,7 @@ services:
     ports:
       - "9091:9091"
       - "29091:29091"
+      - "9101:9101"
     depends_on:
       - zookeeper-1
       - zookeeper-2
@@ -46,6 +47,15 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9091,PLAINTEXT_HOST://host.docker.internal:29091
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+#      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_OPTS: -Dlog4j.logger.org.apache.kafka.common.network.Selector=ERROR
+        -Dcom.sun.management.jmxremote=true
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=kafka.myserver.com
+        -Dcom.sun.management.jmxremote.rmi.port=9101
+        -Djava.net.preferIPv4Stack=true
 
   broker-2:
     image: confluentinc/cp-kafka:6.2.0
@@ -54,6 +64,7 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
+      - "9102:9102"
     depends_on:
       - zookeeper-1
       - zookeeper-2
@@ -64,7 +75,15 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092,PLAINTEXT_HOST://host.docker.internal:29092
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
+      KAFKA_JMX_PORT: 9102
+      #      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_OPTS: -Dlog4j.logger.org.apache.kafka.common.network.Selector=ERROR
+        -Dcom.sun.management.jmxremote=true
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=kafka.myserver.com
+        -Dcom.sun.management.jmxremote.rmi.port=9101
+        -Djava.net.preferIPv4Stack=true
 
   broker-3:
     image: confluentinc/cp-kafka:6.2.0
@@ -73,6 +92,7 @@ services:
     ports:
       - "9093:9093"
       - "29093:29093"
+      - "9103:9103"
     depends_on:
       - zookeeper-1
       - zookeeper-2
@@ -83,15 +103,76 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9093,PLAINTEXT_HOST://host.docker.internal:29093
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9103
+      #      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_OPTS: -Dlog4j.logger.org.apache.kafka.common.network.Selector=ERROR
+        -Dcom.sun.management.jmxremote=true
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=kafka.myserver.com
+        -Dcom.sun.management.jmxremote.rmi.port=9101
+        -Djava.net.preferIPv4Stack=true
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect-base:latest
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - broker-1
+      - broker-2
+      - broker-3
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: host.docker.internal:9091,host.docker.internal:9092,host.docker.internal:9093
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: "my-msa-connect"
+      CONNECT_CONFIG_STORAGE_TOPIC: "my-msa-connect-config"
+      CONNECT_OFFSET_STORAGE_TOPIC: "my-msa-connect-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "my-msa-connect-status"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+#      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://localhost:8081"
+#      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://localhost:8081"
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "host.docker.internal"
+      CONNECT_ZOOKEEPER_CONNECT: "host.docker.internal:2181,host.docker.internal:2182"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+#      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+    volumes:
+#      - ./kafka-connect/etckafka-connectjars:/etc/kafka-connect/jars
+      - ./kafka-connect/usrshareconfluent-hub-components:/usr/share/confluent-hub-components
+    command:
+      - bash
+      - -c
+      - |
+        echo "Installing Connector"
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.2.2
+        /etc/confluent/docker/run
 
   kafka-manager:
-    image:   deltaprojects/kafka-manager:latest
-    container_name: kafka-manager
+#    image:   deltaprojects/kafka-manager:latest
+#    container_name: kafka-manager
+#    ports:
+#      - "9000:9000"
+#    environment:
+#      KAFKA_MANAGER_AUTH_ENABLED: true # default value
+#      KAFKA_MANAGER_USERNAME: admin # default value
+#      KAFKA_MANAGER_PASSWORD: test1234 # default value
+#      KAFKA_MANAGER_LDAP_ENABLED: false
+#      KAFKA_MANAGER_EXTRA_PLAY_OPTS: ""
+    image: hlebalbau/kafka-manager:stable
     ports:
       - "9000:9000"
     environment:
-      KAFKA_MANAGER_AUTH_ENABLED: true # default value
-      KAFKA_MANAGER_USERNAME: admin # default value
-      KAFKA_MANAGER_PASSWORD: test1234 # default value
-      KAFKA_MANAGER_LDAP_ENABLED: false
-      KAFKA_MANAGER_EXTRA_PLAY_OPTS: ""
+      ZK_HOSTS: "host.docker.internal:2181,host.docker.internal:2182"
+      APPLICATION_SECRET: "random-secret"
+      KAFKA_MANAGER_AUTH_ENABLED: "true"
+      KAFKA_MANAGER_USERNAME: admin
+      KAFKA_MANAGER_PASSWORD: test1234
