@@ -107,4 +107,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: refresh, health, beans, httptrace, busrefresh, busenv
+        include: refresh, health, beans, httptrace, busrefresh, busenv, info, prometheus, metrics
