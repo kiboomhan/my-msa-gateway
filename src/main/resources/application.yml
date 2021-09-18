@@ -62,6 +62,7 @@ spring:
             - RewritePath=/user/(?<segment>.*), /$\{segment}
             - AuthorizationHeaderFilter
         - id: msa-app-user
+          order: -1
           uri: lb://MSA-APP-USER
           predicates:
             - Path=/user/actuator/**
@@ -73,10 +74,28 @@ spring:
           uri: lb://MSA-APP-CATALOG
           predicates:
             - Path=/catalog/**
+        - id: msa-app-catalog
+          order: -1
+          uri: lb://MSA-APP-CATALOG
+          predicates:
+            - Path=/catalog/actuator/**
+            - Method=GET,POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/catalog/(?<segment>.*), /$\{segment}
         - id: msa-app-order
           uri: lb://MSA-APP-ORDER
           predicates:
             - Path=/order/**
+        - id: msa-app-order
+          order: -1
+          uri: lb://MSA-APP-ORDER
+          predicates:
+            - Path=/order/actuator/**
+            - Method=GET,POST
+          filters:
+            - RemoveRequestHeader=Cookie
+            - RewritePath=/order/(?<segment>.*), /$\{segment}
         - id: msa-client-app-01
           uri: lb://MSA-CLIENT-APP-01
           predicates:
