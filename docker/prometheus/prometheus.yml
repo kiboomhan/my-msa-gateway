@@ -12,28 +12,28 @@ scrape_configs:
     scrape_interval: 15s
     metrics_path: '/user/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['msa-gateway:8000']
 
   - job_name: 'order-service'
     scrape_interval: 15s
     metrics_path: '/order/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['msa-gateway:8000']
 
   - job_name: 'catalog-service'
     scrape_interval: 15s
     metrics_path: '/catalog/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['msa-gateway:8000']
 
   - job_name: 'apigateway-service'
     scrape_interval: 15s
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['msa-gateway:8000']
 
   - job_name: 'zipkin'
     scrape_interval: 5s
     metrics_path: '/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:9411']
+      - targets: ['zipkin:9411']

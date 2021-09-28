@@ -1,86 +1,82 @@
 # Use root/example as user/password credentials
+# https://github.com/confluentinc/training-administration-src/blob/master/docker-compose.yml
 version: '3.8'
 
 networks:
   msa-net:
     driver: bridge
     ipam:
-      driver: default
       config:
         - subnet: 172.21.0.0/16
           gateway: 172.21.0.1
+  data-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
 
 volumes:
   db-data:
 
 services:
 
-  db:
-    container_name: msaapporder-mariadb
-    image: mariadb
-    #    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: test1234
-      MYSQL_DATABASE: my_db
-    volumes:
-      - db-data:/var/lib/mysql
-      - ./msaapporder-mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
-  #    expose:
-  #      - 3306
-
-  rabbitmq:
-    container_name: rabbitmq
-    image: rabbitmq:3.9-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-      - "5671:5671"
-      - "15671:15671"
-      - "4369:4369"
-    networks:
-      - msa-net
-    environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ-DEFAULT_PASS=guest
-
+  ########################################################################################################## KAFKA
   zookeeper-1:
     image: confluentinc/cp-zookeeper:6.2.0
 #    hostname: zookeeper
     container_name: zookeeper-1
     ports:
-      - "2181:2181"
+      - "12181:12181"
+    networks:
+      data-net:
+        ipv4_address: 172.20.10.10
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 12181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper-1:2888:3888;zookeeper-2:2888:3888
   zookeeper-2:
     image: confluentinc/cp-zookeeper:6.2.0
 #    hostname: zookeeper
     container_name: zookeeper-2
     ports:
-      - "2182:2181"
+      - "22181:22181"
+    networks:
+      data-net:
+        ipv4_address: 172.20.10.20
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 22181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zookeeper-1:2888:3888;zookeeper-2:2888:3888
 
   broker-1:
     image: confluentinc/cp-kafka:6.2.0
 #    hostname: broker-1
     container_name: broker-1
     ports:
-      - "9091:9091"
-      - "29091:29091"
-      - "9101:9101"
+      - "19092:19092"
+#      - "29091:29091"
+#      - "9101:9101"
+    networks:
+      data-net:
+        ipv4_address: 172.20.20.10
+      msa-net:
     depends_on:
       - zookeeper-1
       - zookeeper-2
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "host.docker.internal:2181,host.docker.internal:2182"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9091,PLAINTEXT_HOST://host.docker.internal:29091
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:12181,zookeeper-2:22181
+      KAFKA_LISTENERS: DOCKER://broker-1:9092,HOST://broker-1:19092
+      KAFKA_ADVERTISED_LISTENERS: DOCKER://broker-1:9092,HOST://broker-1:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: DOCKER:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9101
 #      KAFKA_JMX_HOSTNAME: localhost
@@ -97,18 +93,23 @@ services:
 #    hostname: broker-2
     container_name: broker-2
     ports:
-      - "9092:9092"
       - "29092:29092"
-      - "9102:9102"
+#      - "29092:29092"
+#      - "9102:9102"
+    networks:
+      data-net:
+        ipv4_address: 172.20.20.20
+      msa-net:
     depends_on:
       - zookeeper-1
       - zookeeper-2
     environment:
       KAFKA_BROKER_ID: 2
-      KAFKA_ZOOKEEPER_CONNECT: "host.docker.internal:2181,host.docker.internal:2182"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092,PLAINTEXT_HOST://host.docker.internal:29092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:12181,zookeeper-2:22181
+      KAFKA_LISTENERS: DOCKER://broker-2:9092,HOST://broker-2:29092
+      KAFKA_ADVERTISED_LISTENERS: DOCKER://broker-2:9092,HOST://broker-2:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: DOCKER:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9102
       #      KAFKA_JMX_HOSTNAME: localhost
@@ -125,18 +126,23 @@ services:
 #    hostname: broker-3
     container_name: broker-3
     ports:
-      - "9093:9093"
-      - "29093:29093"
-      - "9103:9103"
+      - "39092:39092"
+#      - "29093:29093"
+#      - "9103:9103"
+    networks:
+      data-net:
+        ipv4_address: 172.20.20.30
+      msa-net:
     depends_on:
       - zookeeper-1
       - zookeeper-2
     environment:
       KAFKA_BROKER_ID: 3
-      KAFKA_ZOOKEEPER_CONNECT: "host.docker.internal:2181,host.docker.internal:2182"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9093,PLAINTEXT_HOST://host.docker.internal:29093
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:12181,zookeeper-2:22181
+      KAFKA_LISTENERS: DOCKER://broker-3:9092,HOST://broker-3:39092
+      KAFKA_ADVERTISED_LISTENERS: DOCKER://broker-3:9092,HOST://broker-3:39092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: DOCKER:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9103
       #      KAFKA_JMX_HOSTNAME: localhost
@@ -153,6 +159,9 @@ services:
     container_name: kafka-connect
     ports:
       - "8083:8083"
+    networks:
+      data-net:
+        ipv4_address: 172.20.30.10
     depends_on:
       - zookeeper-1
       - zookeeper-2
@@ -160,7 +169,7 @@ services:
       - broker-2
       - broker-3
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: host.docker.internal:9091,host.docker.internal:9092,host.docker.internal:9093
+      CONNECT_BOOTSTRAP_SERVERS: broker-1:9092,broker-2:9092,broker-3:9092
       CONNECT_REST_PORT: 8083
       CONNECT_GROUP_ID: "my-msa-connect"
       CONNECT_CONFIG_STORAGE_TOPIC: "my-msa-connect-config"
@@ -176,7 +185,7 @@ services:
       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "host.docker.internal"
-      CONNECT_ZOOKEEPER_CONNECT: "host.docker.internal:2181,host.docker.internal:2182"
+      CONNECT_ZOOKEEPER_CONNECT: zookeeper-1:12181,zookeeper-2:22181
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
 #      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
@@ -206,12 +215,14 @@ services:
     ports:
       - "9000:9000"
     environment:
-      ZK_HOSTS: "host.docker.internal:2181,host.docker.internal:2182"
+      ZK_HOSTS: zookeeper-1:12181,zookeeper-2:22181
       APPLICATION_SECRET: "random-secret"
       KAFKA_MANAGER_AUTH_ENABLED: "true"
       KAFKA_MANAGER_USERNAME: admin
       KAFKA_MANAGER_PASSWORD: test1234
 
+
+  ########################################################################################################## LOG
   # The zipkin process services the UI, and also exposes a POST endpoint that
   # instrumentation can send trace data to. Scribe is disabled by default.
   zipkin:
@@ -235,6 +246,8 @@ services:
       # - 9410:9410
 #    depends_on:
 #      - storage
+    networks:
+      - msa-net
 
   prometheus:
     image: prom/prometheus
@@ -243,6 +256,8 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - msa-net
 
   grafana:
     image: grafana/grafana
@@ -252,6 +267,42 @@ services:
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    networks:
+      - msa-net
+
+
+  ########################################################################################################## APPS
+  db:
+    container_name: msa-mariadb
+    image: mariadb
+    networks:
+      - msa-net
+    #    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: test1234
+      MYSQL_DATABASE: my_db
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./msaapporder-mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    #    expose:
+    #      - 3306
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "5671:5671"
+      - "15671:15671"
+      - "4369:4369"
+    networks:
+      - msa-net
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ-DEFAULT_PASS=guest
 
   msa-config:
     container_name: msa-config
@@ -261,7 +312,9 @@ services:
     networks:
       - msa-net
     environment:
-      - JAVA_TOOL_OPTIONS=-Dspring.rabbitmq.host=rabbitmq -Dspring.prorfiles.active=default -Dencrypt.key-store.location=file:/common/keystore/my-msa-config-private.jks
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=default
+        -Dencrypt.key-store.location=file:/common/keystore/my-msa-config-private.jks
     volumes:
       - ./common/keystore:/common/keystore
     depends_on:
@@ -275,7 +328,84 @@ services:
     networks:
       - msa-net
     environment:
-      - JAVA_TOOL_OPTIONS=-Dspring.rabbitmq.host=rabbitmq -Dspring.prorfiles.active=default -Dspring.config.import=optional:configserver:http://msa-config:8888
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=default
+        -Dspring.config.import=optional:configserver:http://msa-config:8888
     depends_on:
       - rabbitmq
       - msa-config
+
+  msa-gateway:
+    container_name: msa-gateway
+    image: kiboomhan/msa-gateway
+    ports:
+      - "8000:8000"
+    networks:
+      - msa-net
+    environment:
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=dev
+        -Dspring.config.import=optional:configserver:http://msa-config:8888
+        -Deureka.client.serviceUrl.defaultZone=http://msa-service-discovery:8761/eureka
+        -Dlogging.level.root=DEBUG
+    depends_on:
+      - rabbitmq
+      - msa-config
+      - msa-service-discovery
+
+  msa-app-user:
+    container_name: msa-app-user
+    image: kiboomhan/msa-app-user
+#    ports:
+#      - "8000:8000"
+    networks:
+      - msa-net
+    environment:
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=dev
+        -Dspring.config.import=optional:configserver:http://msa-config:8888
+        -Deureka.client.serviceUrl.defaultZone=http://msa-service-discovery:8761/eureka
+        -Dspring.zipkin.base-url=http://zipkin:9411
+    depends_on:
+      - rabbitmq
+      - msa-config
+      - msa-service-discovery
+
+  msa-app-order:
+    container_name: msa-app-order
+    image: kiboomhan/msa-app-order
+    #    ports:
+    #      - "8000:8000"
+    networks:
+      - msa-net
+      - data-net
+    environment:
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=dev
+        -Dspring.config.import=optional:configserver:http://msa-config:8888
+        -Deureka.client.serviceUrl.defaultZone=http://msa-service-discovery:8761/eureka
+        -Dspring.datasource.url=jdbc:mariadb://msa-mariadb:3306/my_db
+        -Dspring.zipkin.base-url=http://zipkin:9411
+    depends_on:
+      - rabbitmq
+      - msa-config
+      - msa-service-discovery
+      - msa-mariadb
+
+  msa-app-catalog:
+    container_name: msa-app-catalog
+    image: kiboomhan/msa-app-catalog
+    #    ports:
+    #      - "8000:8000"
+    networks:
+      - msa-net
+      - data-net
+    environment:
+      JAVA_TOOL_OPTIONS: -Dspring.rabbitmq.host=rabbitmq
+        -Dspring.prorfiles.active=dev
+        -Dspring.config.import=optional:configserver:http://msa-config:8888
+        -Deureka.client.serviceUrl.defaultZone=http://msa-service-discovery:8761/eureka
+    depends_on:
+      - rabbitmq
+      - msa-config
+      - msa-service-discovery
